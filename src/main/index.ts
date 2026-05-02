@@ -1,44 +1,52 @@
-import { app, BrowserWindow, nativeImage, Tray } from "electron";
-import path from "path";
-import { uIOhook, UiohookKey } from "uiohook-napi";
+import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
 import { createTray } from "./tray";
-import { Recorder } from "../core/recorder";
+import { createPill } from "./pill";
+import path from "path";
+import os from "os";
 
-let tray: Tray;
-let popup: BrowserWindow;
-let recorder: Recorder;
+export const wavPath = path.join(os.tmpdir(), "vspr.wav");
+
+let recording = false;
+let trayWin: BrowserWindow;
+let pillWin: BrowserWindow;
 
 app.whenReady().then(() => {
     app.dock?.hide();
+    trayWin = createTray();
+    pillWin = createPill();
 
-    recorder = new Recorder();
-    ({ tray, popup } = createTray(recorder));
+    globalShortcut.register("Alt+Space", () => {
+        if (!recording) startRecording();
+        else stopRecording();
+    });
 
-    bindHotkey(recorder, popup);
+    ipcMain.on("recorded", (_, state: string) => {
+        setState("transcribing");
+        setTimeout(() => setState("idle"), 1500);
+    });
 
-    const { ipcMain } = require("electron");
+    ipcMain.on("stop", () => stopRecording());
     ipcMain.on("quit", () => app.quit());
 });
 
-app.on("window-all-closed", (e: Event) => e.preventDefault());
-
-function bindHotkey(rec: Recorder, win: BrowserWindow) {
-    let held = false;
-
-    uIOhook.on("keydown", (e) => {
-        if (e.keycode !== UiohookKey.Space) return;
-        if (!e.altKey || held) return;
-        held = true;
-        rec.start();
-        win.webContents.send("state", "recording");
-    });
-
-    uIOhook.on("keyup", (e) => {
-        if (e.keycode !== UiohookKey.Space) return;
-        if (!held) return;
-        held = false;
-        rec.stop((state) => win.webContents.send("state", state));
-    });
-
-    uIOhook.start();
+function startRecording() {
+    recording = true;
+    trayWin.webContents.send("cmd", "start");
+    pillWin.show();
+    pillWin.webContents.send("cmd", "start");
 }
+
+function stopRecording() {
+    recording = false;
+    trayWin.webContents.send("cmd", "stop");
+    pillWin.webContents.send("cmd", "stop");
+}
+
+function setState(s: string) {
+    if (s === "idle") pillWin.hide();
+    trayWin.webContents.send("state", s);
+    pillWin.webContents.send("state", s);
+}
+
+app.on("will-quit", () => globalShortcut.unregisterAll());
+app.on("window-all-closed", () => { });
