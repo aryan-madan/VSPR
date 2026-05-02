@@ -1,6 +1,8 @@
 import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
 import { createTray } from "./tray";
 import { createPill } from "./pill";
+import { transcribe } from "../core/transcribe";
+import { paste } from "../core/paste";
 import path from "path";
 import os from "os";
 
@@ -20,9 +22,18 @@ app.whenReady().then(() => {
         else stopRecording();
     });
 
-    ipcMain.on("recorded", (_, state: string) => {
+
+    ipcMain.on("recorded", async () => {
         setState("transcribing");
-        setTimeout(() => setState("idle"), 1500);
+        try {
+            const text = await transcribe(wavPath);
+            console.log("Transcribed:", text);
+            paste(text);
+            setState("idle");
+        } catch (e) {
+            console.error("Transcription failed:", e);
+            setState("idle");
+        }
     });
 
     ipcMain.on("stop", () => stopRecording());
