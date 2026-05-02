@@ -17,6 +17,5 @@ export function createWindow(): BrowserWindow {
   });
 
   win.loadFile(path.join(__dirname, "../../src/renderer/main/index.html"));
-  win.webContents.openDevTools({ mode: "detach" });
   return win;
 }

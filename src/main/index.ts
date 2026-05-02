@@ -65,12 +65,15 @@ function boot() {
 
 function bindHotkey() {
     globalShortcut.unregisterAll();
-    const hotkey = getHotkey().trim();
-    if (!hotkey || hotkey.endsWith("+")) return;
-    globalShortcut.register(hotkey, () => {
+    const raw = getHotkey().trim();
+    if (!raw || raw.endsWith("+")) return;
+    const hotkey = raw.replace("Command", "CommandOrControl");
+    console.log("Registering hotkey:", hotkey);
+    const ok = globalShortcut.register(hotkey, () => {
         if (!recording) startRecording();
         else stopRecording();
     });
+    console.log("Registered:", ok);
 }
 
 function startRecording() {

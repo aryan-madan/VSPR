@@ -1,5 +1,10 @@
 const { ipcRenderer } = require("electron");
 
+const list = document.getElementById("history-list");
+const empty = document.getElementById("history-empty");
+const footer = document.getElementById("history-footer");
+const content = document.getElementById("content");
+
 const tabs = {
     history: document.getElementById("tab-history"),
     settings: document.getElementById("tab-settings"),
@@ -11,13 +16,17 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.classList.add("active");
         Object.values(tabs).forEach(t => t.classList.add("hidden"));
         tabs[btn.dataset.tab].classList.remove("hidden");
+        fixListHeight();
     });
 });
 
 document.getElementById("btn-close").addEventListener("click", () => ipcRenderer.send("quit"));
 
-const list = document.getElementById("history-list");
-const empty = document.getElementById("history-empty");
+function fixListHeight() {
+    list.style.height = (content.clientHeight - footer.clientHeight) + "px";
+}
+
+window.addEventListener("resize", fixListHeight);
 
 function timeAgo(ts) {
     const s = Math.floor((Date.now() - ts) / 1000);
@@ -31,6 +40,7 @@ function renderHistory(items) {
     if (!items || !items.length) {
         list.classList.add("hidden");
         empty.classList.remove("hidden");
+        fixListHeight();
         return;
     }
     empty.classList.add("hidden");
@@ -41,11 +51,16 @@ function renderHistory(items) {
       <div class="hist-time">${timeAgo(item.ts)}</div>
     </div>
   `).join("");
+
     list.querySelectorAll(".hist-item").forEach(el => {
-        el.addEventListener("click", () => {
+        el.addEventListener("dblclick", () => {
             ipcRenderer.send("copy", items[el.dataset.i].text);
+            el.style.background = "#1f1f1f";
+            setTimeout(() => el.style.background = "", 300);
         });
     });
+
+    fixListHeight();
 }
 
 document.getElementById("btn-clear").addEventListener("click", () => {
@@ -54,21 +69,20 @@ document.getElementById("btn-clear").addEventListener("click", () => {
 });
 
 ipcRenderer.on("history", (_, items) => renderHistory(items));
-ipcRenderer.send("get-history");
-
-const selModel = document.getElementById("sel-model");
-const inpHotkey = document.getElementById("inp-hotkey");
-
 ipcRenderer.on("settings", (_, s) => {
-    selModel.value = s.model;
-    inpHotkey.value = s.hotkey;
+    document.getElementById("sel-model").value = s.model;
+    document.getElementById("inp-hotkey").value = s.hotkey;
 });
 
+ipcRenderer.send("get-history");
 ipcRenderer.send("get-settings");
 
-selModel.addEventListener("change", () => ipcRenderer.send("set-model", selModel.value));
+document.getElementById("sel-model").addEventListener("change", (e) => {
+    ipcRenderer.send("set-model", e.target.value);
+});
 
 let capturing = false;
+const inpHotkey = document.getElementById("inp-hotkey");
 
 inpHotkey.addEventListener("click", () => {
     inpHotkey.value = "Press keys...";
@@ -89,15 +103,23 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
 
     const mods = [];
-    if (e.metaKey) mods.push("CommandOrControl");
+    if (e.metaKey) mods.push("Command");
     if (e.altKey) mods.push("Alt");
     if (e.ctrlKey) mods.push("Control");
     if (e.shiftKey) mods.push("Shift");
 
     if (["Meta", "Alt", "Control", "Shift"].includes(e.key)) return;
 
-    const keyMap = { " ": "Space", "ArrowUp": "Up", "ArrowDown": "Down", "ArrowLeft": "Left", "ArrowRight": "Right" };
-    const key = keyMap[e.key] ?? e.key.toUpperCase();
+    const keyMap = {
+        " ": "Space",
+        "\u00a0": "Space",
+        "ArrowUp": "Up",
+        "ArrowDown": "Down",
+        "ArrowLeft": "Left",
+        "ArrowRight": "Right",
+    };
+
+    const key = keyMap[e.key] ?? (e.code === "Space" ? "Space" : e.key.toUpperCase());
     const hotkey = [...mods, key].join("+");
 
     inpHotkey.value = hotkey;
@@ -105,3 +127,5 @@ document.addEventListener("keydown", (e) => {
     capturing = false;
     ipcRenderer.send("set-hotkey", hotkey);
 });
+
+fixListHeight();
