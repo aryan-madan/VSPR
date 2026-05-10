@@ -38,11 +38,12 @@ input {
 }
 
 #logo {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 4px 8px 12px;
-    color: #e6e6e6;
+    width: 28px;
+    height: auto;
+    padding-bottom: 8px;
+    -webkit-app-region: no-drag;
+    user-select: none;
+    filter: invert(1);
 }
 
 nav {

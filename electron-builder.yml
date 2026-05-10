@@ -1,0 +1,55 @@
+appId: aryan.vspr.app
+productName: VSPR
+
+forceCodeSigning: false
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - src/renderer/**/*
+  - node_modules/**/*
+  - package.json
+  - build/**/*
+
+extraResources:
+  - from: vendor/whisper/build/bin/whisper-cli
+    to: whisper/whisper-cli
+  - from: vendor/whisper/models
+    to: whisper/models
+
+mac:
+  icon: build/App.icon
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.productivity
+  darkModeSupport: true
+  identity: null
+  forceCodeSigning: false
+
+dmg:
+  title: VSPR
+  window:
+    width: 540
+    height: 380
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+  extraResources:
+    - from: vendor/whisper/Release/whisper-cli.exe
+      to: whisper/whisper-cli.exe
+    - from: vendor/whisper/models
+      to: whisper/models
+
+nsis:
+  oneClick: true
+  perMachine: false
+  deleteAppDataOnUninstall: false

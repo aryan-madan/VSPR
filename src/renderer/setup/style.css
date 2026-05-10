@@ -29,6 +29,9 @@ button,
     padding: 14px 18px;
     border-bottom: 1px solid #1a1a1a;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #sub {
@@ -232,4 +235,12 @@ kbd {
 
 .hidden {
     display: none !important;
+}
+
+#logo {
+    width: 28px;
+    height: auto;
+    -webkit-app-region: no-drag;
+    user-select: none;
+    filter: invert(1);
 }

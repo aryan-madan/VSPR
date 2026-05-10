@@ -1,15 +1,17 @@
-import { BrowserWindow } from "electron";
+import { app, BrowserWindow } from "electron";
 import { exec, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import os from "os";
 import https from "https";
 
-const ROOT = path.join(__dirname, "../../vendor/whisper");
-const MODELS = path.join(ROOT, "models");
+const ENV = { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:/usr/bin:${process.env.PATH}` };
+
+function getRoot(): string { return path.join(app.getPath("userData"), "whisper"); }
+function getModels(): string { return path.join(getRoot(), "models"); }
 
 export type Progress = {
-    step: "check" | "binary" | "model";
+    step: "binary" | "model";
     pct: number;
     message: string;
 };
@@ -19,24 +21,21 @@ function send(win: BrowserWindow, p: Progress) {
 }
 
 export function binPath(): string {
+    const root = getRoot();
     return os.platform() === "win32"
-        ? path.join(ROOT, "whisper-cli.exe")
-        : path.join(ROOT, "build", "bin", "whisper-cli");
+        ? path.join(root, "whisper-cli.exe")
+        : path.join(root, "build", "bin", "whisper-cli");
 }
 
 export function modelPath(model: string): string {
-    return path.join(MODELS, `ggml-${model}.bin`);
+    return path.join(getModels(), `ggml-${model}.bin`);
 }
 
 export function isReady(model: string): boolean {
     return fs.existsSync(binPath()) && fs.existsSync(modelPath(model));
 }
 
-function download(
-    url: string,
-    dest: string,
-    onPct: (pct: number) => void
-): Promise<void> {
+function download(url: string, dest: string, onPct: (pct: number) => void): Promise<void> {
     return new Promise((resolve, reject) => {
         const tmp = dest + ".tmp";
         const file = fs.createWriteStream(tmp);
@@ -67,11 +66,13 @@ function download(
 
 function checkXcode(): Promise<boolean> {
     return new Promise((resolve) => {
-        exec("xcode-select -p", (err) => resolve(!err));
+        exec("xcode-select -p", { env: ENV }, (err) => resolve(!err));
     });
 }
 
 async function buildMac(win: BrowserWindow): Promise<void> {
+    const ROOT = getRoot();
+
     if (fs.existsSync(binPath())) {
         send(win, { step: "binary", pct: 100, message: "Already built" });
         return;
@@ -91,7 +92,7 @@ async function buildMac(win: BrowserWindow): Promise<void> {
             const proc = spawn("git", [
                 "clone", "--depth=1",
                 "https://github.com/ggerganov/whisper.cpp", ROOT
-            ]);
+            ], { env: ENV });
             let err = "";
             proc.stderr.on("data", (d: Buffer) => {
                 const line = d.toString();
@@ -105,7 +106,10 @@ async function buildMac(win: BrowserWindow): Promise<void> {
 
     send(win, { step: "binary", pct: 30, message: "Building (this takes ~1 min)..." });
     await new Promise<void>((resolve, reject) => {
-        const proc = exec(`cd "${ROOT}" && cmake -B build && cmake --build build -j --config Release`);
+        const proc = exec(
+            `cd "${ROOT}" && cmake -B build && cmake --build build -j --config Release`,
+            { env: ENV }
+        );
         let err = "";
         let pct = 30;
         const pulse = setInterval(() => {
@@ -123,6 +127,8 @@ async function buildMac(win: BrowserWindow): Promise<void> {
 }
 
 async function downloadWin(win: BrowserWindow): Promise<void> {
+    const ROOT = getRoot();
+
     if (fs.existsSync(binPath())) {
         send(win, { step: "binary", pct: 100, message: "Already installed" });
         return;
@@ -145,6 +151,7 @@ async function downloadWin(win: BrowserWindow): Promise<void> {
     await new Promise<void>((resolve, reject) => {
         exec(
             `powershell -command "Expand-Archive -Path '${zip}' -DestinationPath '${ROOT}' -Force"`,
+            { env: ENV },
             (err) => err ? reject(err) : resolve()
         );
     });
@@ -154,22 +161,23 @@ async function downloadWin(win: BrowserWindow): Promise<void> {
 }
 
 export async function downloadModel(win: BrowserWindow, model: string): Promise<void> {
-  fs.mkdirSync(MODELS, { recursive: true });
+    const MODELS = getModels();
+    fs.mkdirSync(MODELS, { recursive: true });
 
-  const dest = modelPath(model);
-  if (fs.existsSync(dest)) {
-    send(win, { step: "model", pct: 100, message: "Model already downloaded" });
-    return;
-  }
+    const dest = modelPath(model);
+    if (fs.existsSync(dest)) {
+        send(win, { step: "model", pct: 100, message: "Model already downloaded" });
+        return;
+    }
 
-  const url = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-${model}.bin`;
-  send(win, { step: "model", pct: 0, message: `Downloading ${model} model...` });
+    const url = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-${model}.bin`;
+    send(win, { step: "model", pct: 0, message: `Downloading ${model} model...` });
 
-  await download(url, dest, (pct) => {
-    send(win, { step: "model", pct, message: `Downloading ${model}... ${pct}%` });
-  });
+    await download(url, dest, (pct) => {
+        send(win, { step: "model", pct, message: `Downloading ${model}... ${pct}%` });
+    });
 
-  send(win, { step: "model", pct: 100, message: "Model ready" });
+    send(win, { step: "model", pct: 100, message: "Model ready" });
 }
 
 export async function runSetup(win: BrowserWindow, model: string): Promise<void> {

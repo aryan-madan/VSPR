@@ -30,7 +30,10 @@ app.whenReady().then(async () => {
     }
 
     app.on("browser-window-focus", () => app.dock?.show());
-    app.on("browser-window-blur", () => { if (!mainWin?.isVisible()) app.dock?.hide(); });
+    app.on("browser-window-blur", () => {
+        const anyVisible = BrowserWindow.getAllWindows().some(w => w.isVisible());
+        if (!anyVisible) app.dock?.hide();
+    });
 
     if (isReady()) boot();
     else {

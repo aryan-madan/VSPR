@@ -1,7 +1,9 @@
 import Store from "electron-store";
+import { app } from "electron";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { binPath, modelPath } from "./download";
 
 interface Schema {
     model: string;
@@ -32,18 +34,9 @@ export function addHistory(text: string) {
 
 export function clearHistory() { store.set("history", []); }
 
-const ROOT = path.join(__dirname, "../../vendor/whisper");
-
-export function binPath(): string {
-    return os.platform() === "win32"
-        ? path.join(ROOT, "whisper-cli.exe")
-        : path.join(ROOT, "build", "bin", "whisper-cli");
-}
-
-export function modelPath(model?: string): string {
-    return path.join(ROOT, "models", `ggml-${model ?? getModel()}.bin`);
-}
-
 export function isReady(): boolean {
-    return fs.existsSync(binPath()) && fs.existsSync(modelPath());
+    const model = getModel();
+    return fs.existsSync(binPath()) && fs.existsSync(modelPath(model));
 }
+
+export { binPath, modelPath };
