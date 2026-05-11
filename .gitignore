@@ -3,9 +3,9 @@ dist/
 release/
 *.wav
 *.log
-vendor/whisper/*
+.DS_Store
+
+vendor/whisper/**
 !vendor/whisper/build/
-vendor/whisper/build/*
 !vendor/whisper/build/bin/
-vendor/whisper/build/bin/*
 !vendor/whisper/build/bin/whisper-cli

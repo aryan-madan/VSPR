@@ -1,3 +1,1 @@
-# VSPR
-
-Local voice dictation for Windows and Mac
+![Local-first voice typing](Website/Public/banner.png)
