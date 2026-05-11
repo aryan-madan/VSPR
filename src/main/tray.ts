@@ -49,7 +49,12 @@ export function createTray(): BrowserWindow {
   tray.on("right-click", () => {
     const menu = Menu.buildFromTemplate([
       {
-        label: "Open VSPR", click: () => {
+        label: "About VSPR", click: () => {
+          require("electron").shell.openExternal("https://vspr.app");
+        }
+      },
+      {
+        label: "Show VSPR Window", click: () => {
           if (!mainWin || mainWin.isDestroyed()) {
             mainWin = createWindow();
             setMainWin(mainWin);
@@ -57,10 +62,10 @@ export function createTray(): BrowserWindow {
           }
           mainWin.show();
           mainWin.focus();
+          suspendHotkey();
         }
       },
-      { type: "separator" },
-      { label: "Quit VSPR", click: () => app.quit() },
+      { label: "Quit VSPR", accelerator: "CommandOrControl+Q", click: () => app.quit() },
     ]);
     tray.popUpContextMenu(menu);
   });
