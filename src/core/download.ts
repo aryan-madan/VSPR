@@ -21,13 +21,21 @@ function send(win: BrowserWindow, p: Progress) {
 }
 
 export function binPath(): string {
-    const root = getRoot();
+    if (app.isPackaged) {
+        return os.platform() === "win32"
+            ? path.join(process.resourcesPath, "whisper", "whisper-cli.exe")
+            : path.join(process.resourcesPath, "whisper", "whisper-cli");
+    }
     return os.platform() === "win32"
-        ? path.join(root, "whisper-cli.exe")
-        : path.join(root, "build", "bin", "whisper-cli");
+        ? path.join(getRoot(), "whisper-cli.exe")
+        : path.join(__dirname, "../../vendor/whisper/build/bin/whisper-cli");
 }
 
 export function modelPath(model: string): string {
+    if (app.isPackaged) {
+        const bundled = path.join(process.resourcesPath, "whisper", "models", `ggml-${model}.bin`);
+        if (fs.existsSync(bundled)) return bundled;
+    }
     return path.join(getModels(), `ggml-${model}.bin`);
 }
 
@@ -64,68 +72,6 @@ function download(url: string, dest: string, onPct: (pct: number) => void): Prom
     });
 }
 
-function checkXcode(): Promise<boolean> {
-    return new Promise((resolve) => {
-        exec("xcode-select -p", { env: ENV }, (err) => resolve(!err));
-    });
-}
-
-async function buildMac(win: BrowserWindow): Promise<void> {
-    const ROOT = getRoot();
-
-    if (fs.existsSync(binPath())) {
-        send(win, { step: "binary", pct: 100, message: "Already built" });
-        return;
-    }
-
-    const hasXcode = await checkXcode();
-    if (!hasXcode) {
-        throw new Error(
-            "Xcode Command Line Tools not found.\n\nRun this in Terminal:\n  xcode-select --install\n\nThen reopen VSPR."
-        );
-    }
-
-    if (!fs.existsSync(path.join(ROOT, "CMakeLists.txt"))) {
-        send(win, { step: "binary", pct: 0, message: "Cloning whisper.cpp..." });
-        fs.mkdirSync(path.dirname(ROOT), { recursive: true });
-        await new Promise<void>((resolve, reject) => {
-            const proc = spawn("git", [
-                "clone", "--depth=1",
-                "https://github.com/ggerganov/whisper.cpp", ROOT
-            ], { env: ENV });
-            let err = "";
-            proc.stderr.on("data", (d: Buffer) => {
-                const line = d.toString();
-                err += line;
-                const m = line.match(/(\d+)%/);
-                if (m) send(win, { step: "binary", pct: Math.round(parseInt(m[1]) * 0.3), message: "Cloning..." });
-            });
-            proc.on("close", (code) => code === 0 ? resolve() : reject(`git clone failed:\n${err}`));
-        });
-    }
-
-    send(win, { step: "binary", pct: 30, message: "Building (this takes ~1 min)..." });
-    await new Promise<void>((resolve, reject) => {
-        const proc = exec(
-            `cd "${ROOT}" && cmake -B build && cmake --build build -j --config Release`,
-            { env: ENV }
-        );
-        let err = "";
-        let pct = 30;
-        const pulse = setInterval(() => {
-            pct = Math.min(pct + 1, 95);
-            send(win, { step: "binary", pct, message: "Building..." });
-        }, 600);
-        proc.stderr?.on("data", (d: Buffer) => { err += d.toString(); });
-        proc.on("close", (code) => {
-            clearInterval(pulse);
-            if (code !== 0) return reject(`Build failed:\n${err}`);
-            send(win, { step: "binary", pct: 100, message: "Built successfully" });
-            resolve();
-        });
-    });
-}
-
 async function downloadWin(win: BrowserWindow): Promise<void> {
     const ROOT = getRoot();
 
@@ -136,8 +82,7 @@ async function downloadWin(win: BrowserWindow): Promise<void> {
 
     fs.mkdirSync(ROOT, { recursive: true });
 
-    const arch = os.arch() === "arm64" ? "Win32" : "x64";
-    const url = `https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-bin-${arch}.zip`;
+    const url = `https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-bin-x64.zip`;
     const zip = path.join(ROOT, "whisper.zip");
 
     send(win, { step: "binary", pct: 0, message: "Downloading whisper..." });
@@ -181,7 +126,10 @@ export async function downloadModel(win: BrowserWindow, model: string): Promise<
 }
 
 export async function runSetup(win: BrowserWindow, model: string): Promise<void> {
-    if (os.platform() === "darwin") await buildMac(win);
-    else await downloadWin(win);
+    if (os.platform() === "win32") {
+        await downloadWin(win);
+    } else {
+        send(win, { step: "binary", pct: 100, message: "Whisper engine ready" });
+    }
     await downloadModel(win, model);
 }

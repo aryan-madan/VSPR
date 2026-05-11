@@ -18,6 +18,8 @@ extraResources:
     to: whisper/whisper-cli
   - from: vendor/whisper/models
     to: whisper/models
+    filter:
+      - "**/*.bin"
 
 mac:
   icon: build/App.icon

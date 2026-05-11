@@ -20,8 +20,6 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
     });
 });
 
-document.getElementById("btn-close").addEventListener("click", () => ipcRenderer.send("quit"));
-
 function fixListHeight() {
     list.style.height = (content.clientHeight - footer.clientHeight) + "px";
 }
@@ -68,7 +66,11 @@ document.getElementById("btn-clear").addEventListener("click", () => {
     renderHistory([]);
 });
 
-ipcRenderer.on("history", (_, items) => renderHistory(items));
+ipcRenderer.on("history", (_, items) => {
+    renderHistory(items);
+    fixListHeight();
+});
+
 ipcRenderer.on("settings", (_, s) => {
     document.getElementById("sel-model").value = s.model;
     document.getElementById("inp-hotkey").value = s.hotkey;

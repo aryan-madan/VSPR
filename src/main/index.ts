@@ -31,8 +31,12 @@ app.whenReady().then(async () => {
 
     app.on("browser-window-focus", () => app.dock?.show());
     app.on("browser-window-blur", () => {
-        const anyVisible = BrowserWindow.getAllWindows().some(w => w.isVisible());
-        if (!anyVisible) app.dock?.hide();
+        setTimeout(() => {
+            const anyVisible = BrowserWindow.getAllWindows().some(w =>
+                w.isVisible() && !w.isMinimized()
+            );
+            if (!anyVisible) app.dock?.hide();
+        }, 100);
     });
 
     if (isReady()) boot();
@@ -114,7 +118,7 @@ ipcMain.on("recorded", async () => {
 });
 
 function broadcastHistory() {
-    if (mainWin && !mainWin.isDestroyed() && mainWin.isVisible()) {
+    if (mainWin && !mainWin.isDestroyed()) {
         mainWin.webContents.send("history", getHistory());
     }
 }
@@ -139,3 +143,8 @@ ipcMain.on("set-hotkey", (_, h: string) => {
 
 ipcMain.on("stop", () => stopRecording());
 ipcMain.on("quit", () => app.quit());
+
+ipcMain.on("close-main", () => {
+    mainWin?.hide();
+    resumeHotkey();
+});

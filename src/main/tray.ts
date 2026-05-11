@@ -1,13 +1,20 @@
-import { BrowserWindow, Tray, nativeImage, screen } from "electron";
+import { BrowserWindow, Tray, nativeImage, screen, app, Menu } from "electron";
 import path from "path";
-import { createWindow }                              from "./window";
-import { suspendHotkey, resumeHotkey, setMainWin }  from "./index";
+import { createWindow } from "./window";
+import { suspendHotkey, resumeHotkey, setMainWin } from "./index";
 
 let mainWin: BrowserWindow | null = null;
 
+function icon(): Electron.NativeImage {
+  const img = nativeImage.createFromPath(
+    path.join(__dirname, "../../build/tray.png")
+  );
+  img.setTemplateImage(true);
+  return img;
+}
+
 export function createTray(): BrowserWindow {
-  const tray = new Tray(nativeImage.createEmpty());
-  tray.setTitle("VSPR");
+  const tray = new Tray(icon());
   tray.setToolTip("VSPR");
 
   const win = new BrowserWindow({
@@ -32,32 +39,30 @@ export function createTray(): BrowserWindow {
     if (!mainWin || mainWin.isDestroyed()) {
       mainWin = createWindow();
       setMainWin(mainWin);
-      mainWin.on("show",   () => suspendHotkey());
-      mainWin.on("hide",   () => resumeHotkey());
       mainWin.on("closed", () => { mainWin = null; setMainWin(null); resumeHotkey(); });
     }
-    if (mainWin.isVisible()) {
-      mainWin.hide();
-    } else {
-      mainWin.show();
-      mainWin.focus();
-    }
+    mainWin.show();
+    mainWin.focus();
+    suspendHotkey();
   });
 
-  tray.on("right-click", (_, bounds) => {
-    if (win.isVisible()) { win.hide(); return; }
-    const { workArea } = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
-    const [w, h] = win.getSize();
-    const x = Math.round(bounds.x - w / 2 + bounds.width / 2);
-    const y = bounds.y < workArea.height / 2
-      ? bounds.y + bounds.height + 4
-      : bounds.y - h - 4;
-    win.setPosition(
-      Math.max(workArea.x, Math.min(x, workArea.x + workArea.width  - w)),
-      Math.max(workArea.y, Math.min(y, workArea.y + workArea.height - h)),
-    );
-    win.show();
-    win.focus();
+  tray.on("right-click", () => {
+    const menu = Menu.buildFromTemplate([
+      {
+        label: "Open VSPR", click: () => {
+          if (!mainWin || mainWin.isDestroyed()) {
+            mainWin = createWindow();
+            setMainWin(mainWin);
+            mainWin.on("closed", () => { mainWin = null; setMainWin(null); resumeHotkey(); });
+          }
+          mainWin.show();
+          mainWin.focus();
+        }
+      },
+      { type: "separator" },
+      { label: "Quit VSPR", click: () => app.quit() },
+    ]);
+    tray.popUpContextMenu(menu);
   });
 
   return win;
