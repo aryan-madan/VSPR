@@ -1,4 +1,4 @@
-![Local-first voice typing](Website/public/banner.png)
+![Local-first voice typing](Website/Public/banner.png)
 
 # Local, private voice dictation for Windows & Mac.
 
@@ -7,7 +7,7 @@
 2. Transcription - runs whisper.cpp locally on your device
 3. Paste - copies to clipboard and pastes into the focused app
 
-![Mockup](Website/public/mockup/app.webp)
+![Mockup](Website/Public/mockup/app.webp)
 
 ## Why?
 Apps like Wispr Flow use off-device models for transcribing and editing text with AI. These apps send & store your private conversations.
@@ -37,6 +37,6 @@ VSPR needs *microphone* and *accessbility* permissions to record your voice, and
 
 VSPR offers a choice between the following whisper.cpp models:
 
-![One-time setup](Website/public/mockup/setup.webp)
+![One-time setup](Website/Public/mockup/setup.webp)
 
 ### Made with ❤️ by Ary
