@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, systemPreferenc
 import { createTray } from "./tray";
 import { createPill } from "./pill";
 import { createSetup } from "./setup";
+import { createWindow } from "./window";
 import { runSetup } from "../core/download";
 import { isReady, getHotkey, setModel, setHotkey, addHistory, getHistory, clearHistory, getModel } from "../core/store";
 import { transcribe } from "../core/transcribe";
@@ -29,16 +30,6 @@ app.whenReady().then(async () => {
         systemPreferences.isTrustedAccessibilityClient(true);
     }
 
-    app.on("browser-window-focus", () => app.dock?.show());
-    app.on("browser-window-blur", () => {
-        setTimeout(() => {
-            const anyVisible = BrowserWindow.getAllWindows().some(w =>
-                w.isVisible() && !w.isMinimized()
-            );
-            if (!anyVisible) app.dock?.hide();
-        }, 100);
-    });
-
     if (isReady()) boot();
     else {
         setupWin = createSetup();
@@ -64,10 +55,24 @@ ipcMain.on("setup-complete", () => {
     boot();
 });
 
+function openMain() {
+    if (!mainWin || mainWin.isDestroyed()) {
+        mainWin = createWindow();
+        setMainWin(mainWin);
+        mainWin.on("show", () => { app.dock?.show(); suspendHotkey(); });
+        mainWin.on("hide", () => { app.dock?.hide(); resumeHotkey(); });
+        mainWin.on("closed", () => { mainWin = null; setMainWin(null); app.dock?.hide(); resumeHotkey(); });
+    }
+    mainWin.show();
+    mainWin.focus();
+    app.dock?.show();
+}
+
 function boot() {
     trayWin = createTray();
     pillWin = createPill();
     bindHotkey();
+    openMain();
 }
 
 function bindHotkey() {
@@ -85,24 +90,25 @@ function bindHotkey() {
 
 function startRecording() {
     recording = true;
-    trayWin.webContents.send("cmd", "start");
-    pillWin.show();
-    pillWin.webContents.send("cmd", "start");
-    pillWin.webContents.send("state", "recording");
+    if (trayWin && !trayWin.isDestroyed()) trayWin.webContents.send("cmd", "start");
+    if (pillWin && !pillWin.isDestroyed()) {
+        pillWin.show();
+        pillWin.webContents.send("cmd", "start");
+        pillWin.webContents.send("state", "recording");
+    }
 }
 
 function stopRecording() {
     recording = false;
-    trayWin.webContents.send("cmd", "stop");
-    pillWin.webContents.send("cmd", "stop");
+    if (trayWin && !trayWin.isDestroyed()) trayWin.webContents.send("cmd", "stop");
+    if (pillWin && !pillWin.isDestroyed()) pillWin.webContents.send("cmd", "stop");
 }
 
 ipcMain.on("recorded", async () => {
     setState("transcribing");
     try {
         if (!fs.existsSync(wavPath) || fs.statSync(wavPath).size < 8000) {
-            setState("idle");
-            return;
+            setState("idle"); return;
         }
         const text = await transcribe(wavPath);
         if (text.trim()) {
@@ -142,9 +148,5 @@ ipcMain.on("set-hotkey", (_, h: string) => {
 });
 
 ipcMain.on("stop", () => stopRecording());
-ipcMain.on("quit", () => app.quit());
-
-ipcMain.on("close-main", () => {
-    mainWin?.hide();
-    resumeHotkey();
-});
+ipcMain.on("quit", () => { app.exit(0); });
+ipcMain.on("close-main", () => { mainWin?.hide(); resumeHotkey(); });
