@@ -37,16 +37,17 @@ export default function App() {
                                 <span className="listentext">Transcribing...</span>
                                 <button className="stop"><span className="sq" /></button>
                             </div>
-                            <div
-                                className={`dlwrap ${hovered ? "dlhov" : ""}`}
+                            <a
+                                className={`dl ${hovered ? "dlhov" : ""}`}
+                                href="https://github.com/aryan-madan/VSPR/releases"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 onMouseEnter={() => setHovered(true)}
                                 onMouseLeave={() => setHovered(false)}
                             >
-                                <a className="dl" href="https://github.com/aryan-madan/VSPR/releases" target="_blank" rel="noopener noreferrer">
-                                    <span className="dllabel">Download</span>
-                                    <span className="dlgh"><FaGithub /></span>
-                                </a>
-                            </div>
+                                <span className="dllabel">Download</span>
+                                <span className="dlgh"><FaGithub /></span>
+                            </a>
                         </div>
                     </div>
                 </div>
