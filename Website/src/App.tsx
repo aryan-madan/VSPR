@@ -42,10 +42,10 @@ export default function App() {
                                 onMouseEnter={() => setHovered(true)}
                                 onMouseLeave={() => setHovered(false)}
                             >
-                                <button className="dl">
+                                <a className="dl" href="https://github.com/aryan-madan/VSPR/releases" target="_blank" rel="noopener noreferrer">
                                     <span className="dllabel">Download</span>
                                     <span className="dlgh"><FaGithub /></span>
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
