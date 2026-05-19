@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FaGithub } from "react-icons/fa";
-import "./App.css";
+import "./App";
 
 const WORDS = ["Local-first", "voice", "typing."];
 const BARS = 6;
