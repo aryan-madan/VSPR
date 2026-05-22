@@ -39,6 +39,10 @@ VSPR needs *microphone* and *accessbility* permissions to record your voice, and
 
 VSPR offers a choice between the following whisper.cpp models:
 
+## AI Usage
+
+AI was used for debugging, and css-related code.
+
 ![One-time setup](Website/Public/mockup/setup.webp)
 
 ### Made with ❤️ by Ary
