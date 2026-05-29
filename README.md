@@ -4,6 +4,8 @@
 
 Note: At the time of making this, I did not have a Windows machine to test and debug the app. Please check out the Mac version for a better experience <3
 
+## [IMPORTANT NOTE](NOTE.md)
+
 ## How It Works
 1. Recording - captures mic input
 2. Transcription - runs whisper.cpp locally on your device
